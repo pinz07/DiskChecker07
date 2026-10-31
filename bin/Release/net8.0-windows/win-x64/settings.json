@@ -1,0 +1,5 @@
+{
+  "AppTitle": "DiskChecker - Мой Анализатор",
+  "DefaultMinSizeMB": 10.0,
+  "DefaultMaxDepth": 5
+}

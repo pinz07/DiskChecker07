@@ -1,0 +1,747 @@
+<UserControl x:Class="DiskChecker.Views.SmartFilterView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:DiskChecker.ViewModels"
+             xmlns:conv="clr-namespace:DiskChecker.Converters"
+             Background="Transparent"
+             FontFamily="Segoe UI Variable, Segoe UI">
+
+    <UserControl.Resources>
+
+        <!-- ── Converters ─────────────────────────────────────────────────── -->
+        <conv:BoolToVisibilityConverter        x:Key="BoolToVis"    />
+        <conv:InverseBoolToVisibilityConverter x:Key="InvBoolToVis" />
+        <conv:InverseBoolConverter             x:Key="InvBool"      />
+        <conv:EnumToBoolConverter              x:Key="FilterTypeConverter" />
+
+        <!-- ── DataGrid column header style ──────────────────────────────── -->
+        <Style x:Key="DarkColumnHeader" TargetType="DataGridColumnHeader">
+            <Setter Property="Background"       Value="#FF1A1B1C"/>
+            <Setter Property="Foreground"       Value="#FF8C8D8E"/>
+            <Setter Property="FontSize"         Value="12"/>
+            <Setter Property="FontWeight"       Value="SemiBold"/>
+            <Setter Property="Padding"          Value="12,10"/>
+            <Setter Property="BorderBrush"      Value="#FF262729"/>
+            <Setter Property="BorderThickness"  Value="0,0,1,1"/>
+            <Setter Property="Cursor"           Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridColumnHeader">
+                        <Border x:Name="bg"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <ContentPresenter Grid.Column="0"
+                                                  VerticalAlignment="Center"/>
+                                <!-- Sort arrow: ascending (▲) -->
+                                <Path Grid.Column="1" x:Name="SortAsc"
+                                      Visibility="Collapsed"
+                                      Data="M 0 6 L 4 0 L 8 6 Z"
+                                      Fill="{StaticResource AccentLimeBrush}"
+                                      Margin="4,0,0,0" VerticalAlignment="Center"/>
+                                <!-- Sort arrow: descending (▼) -->
+                                <Path Grid.Column="1" x:Name="SortDesc"
+                                      Visibility="Collapsed"
+                                      Data="M 0 0 L 4 6 L 8 0 Z"
+                                      Fill="{StaticResource AccentLimeBrush}"
+                                      Margin="4,0,0,0" VerticalAlignment="Center"/>
+                            </Grid>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#FF222425"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="SortDirection" Value="Ascending">
+                                <Setter TargetName="SortAsc"  Property="Visibility" Value="Visible"/>
+                                <Setter TargetName="SortDesc" Property="Visibility" Value="Collapsed"/>
+                            </Trigger>
+                            <Trigger Property="SortDirection" Value="Descending">
+                                <Setter TargetName="SortAsc"  Property="Visibility" Value="Collapsed"/>
+                                <Setter TargetName="SortDesc" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ── DataGrid row style ─────────────────────────────────────────── -->
+        <Style x:Key="DarkDataGridRow" TargetType="DataGridRow">
+            <Setter Property="Background"          Value="Transparent"/>
+            <Setter Property="Foreground"          Value="#FFE0E0E0"/>
+            <Setter Property="FontSize"            Value="13"/>
+            <Setter Property="BorderThickness"     Value="0"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#0DFFFFFF"/>
+                </Trigger>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="#1AC0EE5A"/>
+                    <Setter Property="Foreground" Value="#FFC0EE5A"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ── DataGrid cell style ────────────────────────────────────────── -->
+        <Style x:Key="DarkDataGridCell" TargetType="DataGridCell">
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding"         Value="12,8"/>
+            <Setter Property="Background"      Value="Transparent"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="DataGridCell">
+                        <Border Background="{TemplateBinding Background}"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsSelected" Value="True">
+                    <Setter Property="Background" Value="Transparent"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- ── Filter chip / radio-button style ──────────────────────────── -->
+        <Style x:Key="FilterChip" TargetType="RadioButton">
+            <Setter Property="Foreground"      Value="#FF8C8D8E"/>
+            <Setter Property="Background"      Value="#FF1A1B1C"/>
+            <Setter Property="BorderBrush"     Value="#FF262729"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="Padding"         Value="14,9"/>
+            <Setter Property="Margin"          Value="0,0,10,0"/>
+            <Setter Property="FontSize"        Value="13"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="chip"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="20"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="chip" Property="BorderBrush" Value="#FFC0EE5A"/>
+                                <Setter Property="Foreground" Value="White"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="chip" Property="Background"   Value="#22C0EE5A"/>
+                                <Setter TargetName="chip" Property="BorderBrush"  Value="#FFC0EE5A"/>
+                                <Setter Property="Foreground" Value="#FFC0EE5A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ── Input label ────────────────────────────────────────────────── -->
+        <Style x:Key="InputLabel" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#FF8C8D8E"/>
+            <Setter Property="FontSize"   Value="12"/>
+            <Setter Property="Margin"     Value="0,0,0,6"/>
+        </Style>
+
+        <!-- ── Dark TextBox ───────────────────────────────────────────────── -->
+        <Style x:Key="SmFilterTextBox" TargetType="TextBox">
+            <Setter Property="Background"      Value="#FF17181A"/>
+            <Setter Property="Foreground"      Value="White"/>
+            <Setter Property="BorderBrush"     Value="#FF262729"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding"         Value="12,10"/>
+            <Setter Property="FontSize"        Value="14"/>
+            <Setter Property="CaretBrush"      Value="{StaticResource AccentLimeBrush}"/>
+            <Setter Property="Width"           Value="110"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="TextBox">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="8">
+                            <ScrollViewer x:Name="PART_ContentHost"
+                                          Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ── Apply button ───────────────────────────────────────────────── -->
+        <Style x:Key="ApplyButton" TargetType="Button">
+            <Setter Property="Background"      Value="{StaticResource AccentLimeBrush}"/>
+            <Setter Property="Foreground"      Value="Black"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="FontSize"        Value="14"/>
+            <Setter Property="Padding"         Value="24,11"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="10"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Opacity" Value="0.85"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="bg" Property="Opacity" Value="0.4"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- ── Cancel button ──────────────────────────────────────────────── -->
+        <Style x:Key="CancelFilterButton" TargetType="Button">
+            <Setter Property="Background"      Value="#33E85959"/>
+            <Setter Property="Foreground"      Value="{StaticResource AccentRedBrush}"/>
+            <Setter Property="FontWeight"      Value="SemiBold"/>
+            <Setter Property="FontSize"        Value="12"/>
+            <Setter Property="Padding"         Value="12,6"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush"     Value="#55E85959"/>
+            <Setter Property="Cursor"          Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="bg"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="6"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="bg" Property="Background" Value="#55E85959"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Visibility of days panel: visible for RarelyUsed / OldFiles -->
+        <Style x:Key="DaysPanelStyle" TargetType="StackPanel">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding SelectedFilter}"
+                             Value="{x:Static vm:FilterType.RarelyUsed}">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding SelectedFilter}"
+                             Value="{x:Static vm:FilterType.OldFiles}">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Visibility of size panel: visible for LargeFiles only -->
+        <Style x:Key="SizePanelStyle" TargetType="StackPanel">
+            <Setter Property="Visibility" Value="Collapsed"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding SelectedFilter}"
+                             Value="{x:Static vm:FilterType.LargeFiles}">
+                    <Setter Property="Visibility" Value="Visible"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+    </UserControl.Resources>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!--  ROOT LAYOUT                                                           -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>   <!-- 0: filter panel   -->
+            <RowDefinition Height="14"/>     <!-- 1: spacer         -->
+            <RowDefinition Height="Auto"/>   <!-- 2: progress panel -->
+            <RowDefinition Height="Auto"/>   <!-- 3: status bar     -->
+            <RowDefinition Height="10"/>     <!-- 4: spacer         -->
+            <RowDefinition Height="Auto"/>   <!-- 5: DataGrid       -->
+        </Grid.RowDefinitions>
+
+        <!-- ── 0: FILTER PANEL ────────────────────────────────────────────── -->
+        <Border Grid.Row="0"
+                Background="#FF1A1B1C"
+                BorderBrush="#FF262729"
+                BorderThickness="1"
+                CornerRadius="14"
+                Padding="24,20">
+            <StackPanel>
+
+                <!-- Title -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,20">
+                    <Border Background="#1AC0EE5A" Width="38" Height="38"
+                            CornerRadius="9" Margin="0,0,14,0">
+                        <TextBlock Text="🔍" FontSize="18"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Умный фильтр"
+                                   Foreground="White"
+                                   FontSize="20" FontWeight="Bold"/>
+                        <TextBlock Text="Мгновенный анализ закэшированного дерева файлов — без чтения диска"
+                                   Foreground="#FF8C8D8E" FontSize="12"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <!-- Filter chips row -->
+                <TextBlock Text="КРИТЕРИЙ ФИЛЬТРАЦИИ"
+                           Style="{StaticResource InputLabel}"
+                           Margin="0,0,0,10"/>
+
+                <WrapPanel Margin="0,0,0,20">
+                    <RadioButton Content="⏰  Давно не использовались"
+                                 Style="{StaticResource FilterChip}"
+                                 GroupName="FilterGroup"
+                                 IsChecked="{Binding SelectedFilter,
+                                     Converter={StaticResource FilterTypeConverter},
+                                     ConverterParameter=RarelyUsed,
+                                     Mode=TwoWay,
+                                     UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <RadioButton Content="📅  Старые файлы"
+                                 Style="{StaticResource FilterChip}"
+                                 GroupName="FilterGroup"
+                                 IsChecked="{Binding SelectedFilter,
+                                     Converter={StaticResource FilterTypeConverter},
+                                     ConverterParameter=OldFiles,
+                                     Mode=TwoWay,
+                                     UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <RadioButton Content="📦  Большие файлы"
+                                 Style="{StaticResource FilterChip}"
+                                 GroupName="FilterGroup"
+                                 IsChecked="{Binding SelectedFilter,
+                                     Converter={StaticResource FilterTypeConverter},
+                                     ConverterParameter=LargeFiles,
+                                     Mode=TwoWay,
+                                     UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <RadioButton Content="🗑️  Возможный мусор"
+                                 Style="{StaticResource FilterChip}"
+                                 GroupName="FilterGroup"
+                                 IsChecked="{Binding SelectedFilter,
+                                     Converter={StaticResource FilterTypeConverter},
+                                     ConverterParameter=Junk,
+                                     Mode=TwoWay,
+                                     UpdateSourceTrigger=PropertyChanged}"/>
+                </WrapPanel>
+
+                <!-- Parameter panel row -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,0">
+
+                    <!-- Days threshold (RarelyUsed / OldFiles) -->
+                    <StackPanel Style="{StaticResource DaysPanelStyle}"
+                                Orientation="Horizontal"
+                                Margin="0,0,30,0">
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="КОЛИЧЕСТВО ДНЕЙ"
+                                       Style="{StaticResource InputLabel}"/>
+                            <TextBox Style="{StaticResource SmFilterTextBox}"
+                                     Text="{Binding DaysThreshold,
+                                         UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Center">
+                            <Slider Width="180" Minimum="1" Maximum="3650"
+                                    Value="{Binding DaysThreshold}"
+                                    Foreground="{StaticResource AccentLimeBrush}"
+                                    VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding DaysThreshold,
+                                           StringFormat='{}Более {0} дней'}"
+                                       Foreground="#FF8C8D8E" FontSize="11"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Min size threshold (LargeFiles) -->
+                    <StackPanel Style="{StaticResource SizePanelStyle}"
+                                Orientation="Horizontal"
+                                Margin="0,0,30,0">
+                        <StackPanel Margin="0,0,16,0">
+                            <TextBlock Text="МИН. РАЗМЕР (МБ)"
+                                       Style="{StaticResource InputLabel}"/>
+                            <TextBox Style="{StaticResource SmFilterTextBox}"
+                                     Text="{Binding MinSizeMBThreshold,
+                                         UpdateSourceTrigger=PropertyChanged,
+                                         StringFormat={}{0:F0}}"/>
+                        </StackPanel>
+                        <StackPanel VerticalAlignment="Center">
+                            <Slider Width="180" Minimum="1" Maximum="10240"
+                                    Value="{Binding MinSizeMBThreshold}"
+                                    Foreground="{StaticResource AccentLimeBrush}"
+                                    VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding MinSizeMBThreshold,
+                                           StringFormat='{}Более {0:F0} МБ'}"
+                                       Foreground="#FF8C8D8E" FontSize="11"
+                                       Margin="0,4,0,0"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- Apply button (always visible) -->
+                    <Button Style="{StaticResource ApplyButton}"
+                            Content="⚡  Применить фильтр"
+                            Command="{Binding ApplyFilterCommand}"
+                            IsEnabled="{Binding IsFiltering, Converter={StaticResource InvBool}}"
+                            VerticalAlignment="Bottom"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ── 2: PROGRESS & STAGE PANEL (Visible during filtering) ──────── -->
+        <Border Grid.Row="2"
+                Background="#FF1A1B1C"
+                BorderBrush="#FF262729"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="20,16"
+                Margin="0,0,0,10"
+                Visibility="{Binding IsFiltering, Converter={StaticResource BoolToVis}}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <!-- Top row: Stage, Time Remaining badge, Cancel button -->
+                <Grid Grid.Row="0" Margin="0,0,0,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Current stage -->
+                    <StackPanel Grid.Column="0" Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="⏳" FontSize="15" Margin="0,0,8,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding ProgressStageText}"
+                                   Foreground="White"
+                                   FontSize="14" FontWeight="SemiBold"
+                                   VerticalAlignment="Center"
+                                   TextTrimming="CharacterEllipsis"/>
+                    </StackPanel>
+
+                    <!-- Estimated time remaining badge -->
+                    <Border Grid.Column="1"
+                            Background="#1AC0EE5A"
+                            BorderBrush="#33C0EE5A"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="10,4"
+                            Margin="0,0,12,0"
+                            VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="⏱  " FontSize="11" Foreground="{StaticResource AccentLimeBrush}"/>
+                            <TextBlock Text="{Binding EstimatedTimeText}"
+                                       Foreground="{StaticResource AccentLimeBrush}"
+                                       FontSize="12" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Cancel button -->
+                    <Button Grid.Column="2"
+                            Content="✕ Отмена"
+                            Command="{Binding CancelFilterCommand}"
+                            Style="{StaticResource CancelFilterButton}"
+                            VerticalAlignment="Center"/>
+                </Grid>
+
+                <!-- Middle row: Progress bar -->
+                <Grid Grid.Row="1" Margin="0,0,0,8">
+                    <ProgressBar Height="8"
+                                 Minimum="0" Maximum="100"
+                                 Value="{Binding FilterProgress}"
+                                 Foreground="{StaticResource AccentLimeBrush}"
+                                 Background="#FF121314"
+                                 BorderThickness="0">
+                        <ProgressBar.Template>
+                            <ControlTemplate TargetType="ProgressBar">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="4" ClipToBounds="True">
+                                    <Grid>
+                                        <Border x:Name="PART_Track" />
+                                        <Border x:Name="PART_Indicator"
+                                                Background="{TemplateBinding Foreground}"
+                                                HorizontalAlignment="Left"
+                                                CornerRadius="4"/>
+                                    </Grid>
+                                </Border>
+                            </ControlTemplate>
+                        </ProgressBar.Template>
+                    </ProgressBar>
+                </Grid>
+
+                <!-- Bottom row: Sub-details + Percentage -->
+                <Grid Grid.Row="2">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding ProgressDetailsText}"
+                               Foreground="#FF8C8D8E"
+                               FontSize="12"
+                               TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Column="1"
+                               Text="{Binding FilterProgress, StringFormat='{}{0:F0}%'}"
+                               Foreground="{StaticResource AccentLimeBrush}"
+                               FontSize="12" FontWeight="Bold"/>
+                </Grid>
+            </Grid>
+        </Border>
+
+        <!-- ── 3: STATUS BAR (Visible when NOT filtering) ─────────────────── -->
+        <Border Grid.Row="3"
+                Background="#FF121314"
+                BorderBrush="#FF262729"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16,10"
+                Visibility="{Binding IsFiltering, Converter={StaticResource InvBoolToVis}}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0"
+                           Text="{Binding StatusText}"
+                           Foreground="#FF8C8D8E"
+                           FontSize="13"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"/>
+                <Border Grid.Column="1"
+                        Background="#1AC0EE5A"
+                        CornerRadius="6" Padding="10,4">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Visible"/>
+                            <Style.Triggers>
+                                <!-- скрываем бейдж когда нет результатов -->
+                                <DataTrigger Binding="{Binding ResultCount}" Value="0">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <TextBlock Foreground="{StaticResource AccentLimeBrush}"
+                               FontSize="12" FontWeight="SemiBold">
+                        <Run Text="{Binding ResultCount, StringFormat={}{0:N0}}"/>
+                        <Run Text=" файлов"/>
+                    </TextBlock>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- ── 5: DATA GRID CONTAINER ────────────────────────────────────── -->
+        <!-- Explicit Height="580" gives the DataGrid a fixed viewport inside   -->
+        <!-- MainWindow's ScrollViewer/StackPanel, ensuring UI virtualization    -->
+        <!-- is active. Prevents UI freezes/crashes on large file lists.        -->
+        <Border Grid.Row="5"
+                Background="#FF1A1B1C"
+                BorderBrush="#FF262729"
+                BorderThickness="1"
+                CornerRadius="14"
+                ClipToBounds="True"
+                Height="580">
+
+            <Grid>
+                <DataGrid x:Name="ResultsGrid"
+                          ItemsSource="{Binding FilteredFiles}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          CanUserReorderColumns="True"
+                          CanUserSortColumns="True"
+                          SelectionMode="Single"
+                          SelectionUnit="FullRow"
+                          GridLinesVisibility="Horizontal"
+                          HorizontalGridLinesBrush="#FF222425"
+                          Background="Transparent"
+                          RowBackground="Transparent"
+                          AlternatingRowBackground="#08FFFFFF"
+                          BorderThickness="0"
+                          ColumnHeaderStyle="{StaticResource DarkColumnHeader}"
+                          RowStyle="{StaticResource DarkDataGridRow}"
+                          CellStyle="{StaticResource DarkDataGridCell}"
+                          VirtualizingPanel.IsVirtualizing="True"
+                          VirtualizingPanel.VirtualizationMode="Recycling"
+                          ScrollViewer.CanContentScroll="True"
+                          ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto"
+                          EnableRowVirtualization="True"
+                          Margin="0">
+
+                    <!-- ── Context Menu ──────────────────────────────────── -->
+                    <DataGrid.ContextMenu>
+                        <ContextMenu Background="#FF1A1B1C"
+                                     BorderBrush="#FF262729"
+                                     Foreground="White">
+                            <MenuItem Header="📂  Открыть папку с файлом"
+                                      Command="{Binding PlacementTarget.DataContext.OpenInExplorerCommand,
+                                          RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                      CommandParameter="{Binding PlacementTarget.SelectedItem,
+                                          RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                      Foreground="White"
+                                      Background="Transparent">
+                                <MenuItem.Style>
+                                    <Style TargetType="MenuItem">
+                                        <Setter Property="Foreground" Value="White"/>
+                                        <Setter Property="Background" Value="Transparent"/>
+                                        <Style.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter Property="Background" Value="#1AC0EE5A"/>
+                                                <Setter Property="Foreground" Value="#FFC0EE5A"/>
+                                            </Trigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </MenuItem.Style>
+                            </MenuItem>
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
+
+                    <!-- ── Columns ───────────────────────────────────────── -->
+                    <DataGrid.Columns>
+
+                        <!-- Name -->
+                        <DataGridTextColumn Header="Имя файла"
+                                            Binding="{Binding Name}"
+                                            Width="240"
+                                            SortMemberPath="Name">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    <Setter Property="ToolTip"      Value="{Binding Name}"/>
+                                    <Setter Property="FontWeight"   Value="SemiBold"/>
+                                    <Setter Property="Foreground"   Value="White"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Path -->
+                        <DataGridTextColumn Header="Путь к файлу"
+                                            Binding="{Binding Path}"
+                                            Width="*"
+                                            SortMemberPath="Path">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+                                    <Setter Property="ToolTip"      Value="{Binding Path}"/>
+                                    <Setter Property="Foreground"   Value="#FF8C8D8E"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Size MB -->
+                        <DataGridTextColumn Header="Размер"
+                                            Binding="{Binding FormattedSize}"
+                                            Width="120"
+                                            SortMemberPath="SizeMB">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground"        Value="#FFC0EE5A"/>
+                                    <Setter Property="FontWeight"        Value="SemiBold"/>
+                                    <Setter Property="HorizontalAlignment" Value="Right"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Created -->
+                        <DataGridTextColumn Header="Создан"
+                                            Binding="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy}'}"
+                                            Width="105"
+                                            SortMemberPath="CreatedAt">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#FF8C8D8E"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Modified -->
+                        <DataGridTextColumn Header="Изменён"
+                                            Binding="{Binding ModifiedAt, StringFormat='{}{0:dd.MM.yyyy}'}"
+                                            Width="105"
+                                            SortMemberPath="ModifiedAt">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#FF8C8D8E"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                        <!-- Accessed -->
+                        <DataGridTextColumn Header="Последний доступ"
+                                            Binding="{Binding AccessedAt, StringFormat='{}{0:dd.MM.yyyy}'}"
+                                            Width="135"
+                                            SortMemberPath="AccessedAt">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="#FF8C8D8E"/>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <!-- Empty-state placeholder (shown when no results and not filtering) -->
+                <Border IsHitTestVisible="False"
+                        VerticalAlignment="Center" HorizontalAlignment="Center">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding FilteredFiles.Count}" Value="0"/>
+                                        <Condition Binding="{Binding IsFiltering}" Value="False"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </MultiDataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <StackPanel HorizontalAlignment="Center">
+                        <TextBlock Text="🔍" FontSize="44"
+                                   HorizontalAlignment="Center"
+                                   Opacity="0.3"/>
+                        <TextBlock Text="Нет результатов"
+                                   Foreground="#FF8C8D8E" FontSize="16"
+                                   HorizontalAlignment="Center" Margin="0,12,0,4"/>
+                        <TextBlock Text="Выберите критерий фильтрации и нажмите «Применить фильтр»"
+                                   Foreground="#FF5C5D5E" FontSize="13"
+                                   HorizontalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+    </Grid>
+</UserControl>

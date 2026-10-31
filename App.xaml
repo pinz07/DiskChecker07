@@ -1,0 +1,115 @@
+<Application x:Class="DiskChecker.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:conv="clr-namespace:DiskChecker.Converters"
+             StartupUri="Views/MainWindow.xaml">
+    <Application.Resources>
+        <!-- Converters -->
+        <conv:SizeToStringConverter x:Key="SizeToString" />
+        <conv:BoolToVisibilityConverter x:Key="BoolToVis" />
+        <conv:InverseBoolToVisibilityConverter x:Key="InvBoolToVis" />
+        <conv:InverseBoolConverter x:Key="InvBool" />
+        <conv:MbToDisplayConverter x:Key="MbToDisplay" />
+        <conv:BoolToLightRedGreenConverter x:Key="BoolToLightRedGreenConverter" />
+        <conv:BoolToDarkRedGreenConverter x:Key="BoolToDarkRedGreenConverter" />
+        <conv:EnumToBoolConverter x:Key="FilterTypeConverter" />
+
+        <!-- ===== Folia Colors ===== -->
+        <Color x:Key="BgVeryDark">#FF0D0E10</Color>
+        <Color x:Key="BgDark">#FF121314</Color>
+        <Color x:Key="BgCard">#FF1A1B1C</Color>
+        <Color x:Key="BgCardHover">#FF222425</Color>
+        
+        <Color x:Key="AccentLime">#FFC0EE5A</Color>
+        <Color x:Key="AccentLimeDark">#FF8CB23E</Color>
+        <Color x:Key="AccentRed">#FFE85959</Color>
+        <Color x:Key="AccentRedDark">#FF592222</Color>
+        
+        <Color x:Key="TextWhite">#FFFFFFFF</Color>
+        <Color x:Key="TextGray">#FF8C8D8E</Color>
+        <Color x:Key="BorderDark">#FF262729</Color>
+
+        <!-- Brushes -->
+        <SolidColorBrush x:Key="BgVeryDarkBrush" Color="{StaticResource BgVeryDark}" />
+        <SolidColorBrush x:Key="BgDarkBrush" Color="{StaticResource BgDark}" />
+        <SolidColorBrush x:Key="BgCardBrush" Color="{StaticResource BgCard}" />
+        <SolidColorBrush x:Key="AccentLimeBrush" Color="{StaticResource AccentLime}" />
+        <SolidColorBrush x:Key="AccentRedBrush" Color="{StaticResource AccentRed}" />
+        <SolidColorBrush x:Key="TextWhiteBrush" Color="{StaticResource TextWhite}" />
+        <SolidColorBrush x:Key="TextGrayBrush" Color="{StaticResource TextGray}" />
+        <SolidColorBrush x:Key="BorderDarkBrush" Color="{StaticResource BorderDark}" />
+
+        <!-- Sidebar Item Glow Gradient -->
+        <LinearGradientBrush x:Key="SidebarActiveBrush" StartPoint="0,0.5" EndPoint="1,0.5">
+            <GradientStop Color="#00C0EE5A" Offset="0"/>
+            <GradientStop Color="#33C0EE5A" Offset="0.8"/>
+            <GradientStop Color="#FFC0EE5A" Offset="1"/>
+        </LinearGradientBrush>
+
+        <!-- Custom ScrollBar -->
+        <Style TargetType="ScrollBar">
+            <Setter Property="Background" Value="Transparent" />
+            <Style.Triggers>
+                <Trigger Property="Orientation" Value="Vertical">
+                    <Setter Property="Width" Value="6" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ScrollBar">
+                                <Grid>
+                                    <Border Background="Transparent" />
+                                    <Track Name="PART_Track" IsDirectionReversed="true">
+                                        <Track.Thumb>
+                                            <Thumb>
+                                                <Thumb.Template>
+                                                    <ControlTemplate TargetType="Thumb">
+                                                        <Border Background="#33FFFFFF" CornerRadius="3" />
+                                                    </ControlTemplate>
+                                                </Thumb.Template>
+                                            </Thumb>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+                <Trigger Property="Orientation" Value="Horizontal">
+                    <Setter Property="Height" Value="6" />
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ScrollBar">
+                                <Grid>
+                                    <Border Background="Transparent" />
+                                    <Track Name="PART_Track">
+                                        <Track.Thumb>
+                                            <Thumb>
+                                                <Thumb.Template>
+                                                    <ControlTemplate TargetType="Thumb">
+                                                        <Border Background="#33FFFFFF" CornerRadius="3" />
+                                                    </ControlTemplate>
+                                                </Thumb.Template>
+                                            </Thumb>
+                                        </Track.Thumb>
+                                    </Track>
+                                </Grid>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- Global Tooltip -->
+        <Style TargetType="ToolTip">
+            <Setter Property="Background" Value="{StaticResource BgCardBrush}" />
+            <Setter Property="Foreground" Value="{StaticResource TextWhiteBrush}" />
+            <Setter Property="BorderBrush" Value="{StaticResource BorderDarkBrush}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="FontFamily" Value="Segoe UI Variable, Segoe UI" />
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="HasDropShadow" Value="True" />
+        </Style>
+
+    </Application.Resources>
+</Application>

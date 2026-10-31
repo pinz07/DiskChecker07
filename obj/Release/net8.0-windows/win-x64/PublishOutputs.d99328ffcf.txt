@@ -1,0 +1,3 @@
+C:\vibe_CODING\DISK_CHEAKER\DiskChecker\bin\Release\net8.0-windows\win-x64\publish\DiskChecker.pdb
+C:\vibe_CODING\DISK_CHEAKER\DiskChecker\bin\Release\net8.0-windows\win-x64\publish\settings.json
+C:\vibe_CODING\DISK_CHEAKER\DiskChecker\bin\Release\net8.0-windows\win-x64\publish\DiskChecker.exe
